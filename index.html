@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Catene di Markov musicali</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero" aria-labelledby="page-title">
+        <canvas id="heroCanvas" aria-hidden="true"></canvas>
+        <div class="hero__copy">
+          <div class="hero__credits">Francesco Vitucci, 2026</div>
+          <p class="eyebrow">Generatore musicale locale</p>
+          <h1 id="page-title">Catene di Markov musicali</h1>
+          <p class="lead">
+            Carica un brano, osserva come si muovono note e durate,
+            poi crea una nuova versione ispirata al materiale originale.
+          </p>
+        </div>
+      </section>
+
+      <section class="workspace" aria-label="Generatore">
+        <form id="generatorForm" class="panel">
+          <div class="intro-note">
+            <h2>Cosa succede</h2>
+            <p>
+              L'app ascolta il brano che carichi e osserva quali note, durate e salti melodici compaiono più spesso.
+              Poi usa queste abitudini musicali per creare una nuova versione: non copia semplicemente il file,
+              ma prova a muoversi nello stesso modo.
+            </p>
+          </div>
+
+          <div class="field field--file">
+            <label for="midiFile">File musicale</label>
+            <span>Carica un file .mid o .midi. Tutto resta nel browser, senza invio a server.</span>
+            <input id="midiFile" name="midiFile" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" required>
+          </div>
+
+          <div class="field">
+            <label for="outdir">Nome cartella</label>
+            <span>Nome della cartella dentro l'archivio finale. Serve a tenere ordinati i materiali creati.</span>
+            <input id="outdir" name="outdir" type="text" value="risultato" autocomplete="off">
+          </div>
+
+          <div class="field">
+            <label for="metricFormVariation">Quanto cambiare</label>
+            <span>Regola quanto la nuova versione può allontanarsi dal ritmo ascoltato. 0 resta più fedele, 1 cambia più spesso.</span>
+            <input id="metricFormVariation" name="metricFormVariation" type="range" min="0" max="1" step="0.01" value="0">
+            <output id="metricFormVariationValue" for="metricFormVariation">0.00</output>
+          </div>
+
+          <div class="field">
+            <label for="metricSimilarityThreshold">Quanto somigliare</label>
+            <span>Regola quanto ogni scelta deve restare vicina al brano caricato. Valori alti mantengono gesti più riconoscibili.</span>
+            <input id="metricSimilarityThreshold" name="metricSimilarityThreshold" type="range" min="0" max="1" step="0.01" value="0.6">
+            <output id="metricSimilarityThresholdValue" for="metricSimilarityThreshold">0.60</output>
+          </div>
+
+          <div class="field field--switch">
+            <label for="allowDifferentMeterVariants">Cambia battuta</label>
+            <span>Se attivo, la nuova versione può prendere spunti anche da battute con accenti diversi.</span>
+            <input id="allowDifferentMeterVariants" name="allowDifferentMeterVariants" type="checkbox">
+          </div>
+
+          <div class="field">
+            <label for="transitionWindowSize">Ascolto vicino</label>
+            <span>Quanti gesti consecutivi vengono considerati alla volta. Valori piccoli seguono meglio i cambiamenti del brano.</span>
+            <input id="transitionWindowSize" name="transitionWindowSize" type="number" min="2" step="1" value="5">
+          </div>
+
+          <div class="field">
+            <label for="transitionWindowStep">Avanzamento</label>
+            <span>Di quanti gesti si sposta l'ascolto dopo ogni scelta. Con 1 il movimento è più continuo.</span>
+            <input id="transitionWindowStep" name="transitionWindowStep" type="number" min="1" step="1" value="1">
+          </div>
+
+          <button class="primary" type="submit">Analizza e genera</button>
+        </form>
+
+        <aside class="results" aria-live="polite">
+          <div>
+            <p class="eyebrow">Risultato</p>
+            <h2>Materiali creati</h2>
+          </div>
+          <p id="statusText" class="status">In attesa di un file.</p>
+          <p id="fileSummary" class="file-summary" hidden></p>
+
+          <a id="downloadZip" class="download" hidden>Scarica archivio</a>
+        </aside>
+
+        <section id="pianoRollPanel" class="piano-roll" hidden>
+          <div class="piano-roll__header">
+            <h2>Disegno delle note</h2>
+            <div class="legend" aria-label="Legenda del disegno delle note">
+              <span><i class="legend__original"></i>Originale</span>
+              <span><i class="legend__generated"></i>Generato</span>
+            </div>
+          </div>
+          <canvas id="pianoRollCanvas" width="1600" height="520"></canvas>
+          <div class="alpha-controls">
+            <label for="originalAlpha">Trasparenza originale</label>
+            <input id="originalAlpha" type="range" min="0.1" max="1" step="0.05" value="0.45">
+            <label for="generatedAlpha">Trasparenza nuova versione</label>
+            <input id="generatedAlpha" type="range" min="0.1" max="1" step="0.05" value="0.55">
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="app.js?v=20260503-10"></script>
+  </body>
+</html>
