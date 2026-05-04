@@ -1,9 +1,9 @@
-\version "2.24.4"
+\version "2.26.0"
 \language "italiano"
 
 \header {
   title = "Fra Martino"
-  subtitle = "Nomi delle note in italiano"
+  subtitle = " "
   tagline = ##f
 }
 
@@ -15,14 +15,14 @@
 melodiaFraMartino = \relative do' {
   \key do \major
   \time 4/4
-  \tempo 4 = 96
+  %\tempo 4 = 96
 
   do4 re mi do
   do4 re mi do
   mi4 fa sol2
-  mi4 fa sol2
+  mi4 fa sol2 \break
   sol8 la sol fa mi4 do
-  sol8 la sol fa mi4 do
+  sol'8 la sol fa mi4 do
   re4 sol, do2
   re4 sol, do2
   \bar "|."
@@ -35,7 +35,7 @@ melodiaFraMartino = \relative do' {
       \melodiaFraMartino
     }
     \new Staff \with {
-      instrumentName = "Canto"
+      instrumentName = ""
       midiInstrument = "flute"
     } {
       \clef treble
