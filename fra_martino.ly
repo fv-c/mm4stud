@@ -37,6 +37,9 @@ melodiaFraMartino = \relative do' {
     \new Staff \with {
       instrumentName = ""
       midiInstrument = "flute"
+      \remove "Bar_engraver"
+      \remove "Time_signature_engraver"
+      \override Stem.stencil = ##f \override Beam.stencil = ##f \override NoteHead.duration-log = #4
     } {
       \clef treble
       \melodiaFraMartino
