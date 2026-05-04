@@ -175,6 +175,7 @@ function getTimeSignatureSegments(midi) {
   return sorted.map((entry, index) => {
     const [numerator, denominator] = entry.timeSignature || [4, 4];
     const startTick = entry.ticks || 0;
+    const startQl = startTick / ppq;
     const barDurationQl = numerator * (4 / denominator);
     const barTicks = barDurationQl * ppq;
     if (index > 0) {
@@ -185,6 +186,7 @@ function getTimeSignatureSegments(midi) {
     }
     return {
       startTick,
+      startQl,
       startMeasure,
       numerator,
       denominator,
@@ -193,6 +195,23 @@ function getTimeSignatureSegments(midi) {
       barTicks,
     };
   });
+}
+
+function getDefaultMeterSegments() {
+  return [{
+    startTick: 0,
+    startQl: 0,
+    startMeasure: 1,
+    numerator: 4,
+    denominator: 4,
+    timeSignature: DEFAULT_TIME_SIGNATURE,
+    barDurationQl: DEFAULT_BAR_DURATION_QL,
+    barTicks: DEFAULT_BAR_DURATION_QL * 480,
+  }];
+}
+
+function meterSegmentsForRendering(meterSegments) {
+  return meterSegments?.length ? meterSegments : getDefaultMeterSegments();
 }
 
 function metricContextForTick(tick, segments, ppq) {
@@ -773,7 +792,7 @@ function midiChannelForPart(partPosition) {
   return channel >= 9 ? channel + 1 : channel;
 }
 
-function buildGeneratedMidiBytes(parts, generatedRows, tempo, gate, ppq = 480) {
+function buildGeneratedMidiBytes(parts, generatedRows, tempo, gate, meterSegments, ppq = 480) {
   const microsecondsPerBeat = Math.round(60000000 / Math.max(1, tempo));
   const outputParts = parts
     .map((part, partPosition) => ({
@@ -788,6 +807,14 @@ function buildGeneratedMidiBytes(parts, generatedRows, tempo, gate, ppq = 480) {
     ...uint16(outputParts.length + 1),
     ...uint16(ppq),
   ]);
+  const timeSignatureEvents = meterSegmentsForRendering(meterSegments).map((segment) => {
+    const denominatorPower = Math.max(0, Math.round(Math.log2(Number(segment.denominator) || 4)));
+    return {
+      tick: Math.round(Number(segment.startQl || 0) * ppq),
+      priority: 1,
+      bytes: [0xff, 0x58, 4, Number(segment.numerator) || 4, denominatorPower, 24, 8],
+    };
+  });
   const tempoTrack = encodeTrack([
     {
       tick: 0,
@@ -801,7 +828,7 @@ function buildGeneratedMidiBytes(parts, generatedRows, tempo, gate, ppq = 480) {
         microsecondsPerBeat & 0xff,
       ],
     },
-    { tick: 0, priority: 1, bytes: [0xff, 0x58, 4, 4, 2, 24, 8] },
+    ...timeSignatureEvents,
   ]);
   const tracks = [tempoTrack];
 
@@ -838,7 +865,7 @@ function buildGeneratedMidiBytes(parts, generatedRows, tempo, gate, ppq = 480) {
   return new Uint8Array([...header, ...tracks.flat()]);
 }
 
-function generateMultitrackMidi(generatedByPart, parts, tempo, gate) {
+function generateMultitrackMidi(generatedByPart, parts, tempo, gate, meterSegments) {
   const generatedRows = [];
   const trackManifestRows = [];
   for (const part of parts) {
@@ -867,7 +894,7 @@ function generateMultitrackMidi(generatedByPart, parts, tempo, gate) {
     });
   }
   return {
-    midiBytes: buildGeneratedMidiBytes(parts, generatedRows, tempo, gate),
+    midiBytes: buildGeneratedMidiBytes(parts, generatedRows, tempo, gate, meterSegments),
     generatedRows,
     trackManifestRows,
   };
@@ -984,6 +1011,7 @@ async function runPipeline(file, options) {
   const inputBuffer = await file.arrayBuffer();
   const midi = new Midi(inputBuffer);
   const tempo = Math.round(midi.header.tempos?.[0]?.bpm || DEFAULT_TEMPO);
+  const meterSegments = getTimeSignatureSegments(midi);
   const rng = mulberry32(DEFAULT_SEED);
   const outdir = sanitizeName(options.outdir || "risultato");
   options.transitionWindowSize = Math.max(2, Math.floor(Number(options.transitionWindowSize) || DEFAULT_TRANSITION_WINDOW_SIZE));
@@ -1246,7 +1274,7 @@ async function runPipeline(file, options) {
   addFile(files, `${outdir}/time_varying_transition_matrices_sparse.csv`, toCsv(transitionMatrixRows));
   addFile(files, `${outdir}/interval_profile_by_part.csv`, toCsv(intervalProfileRows));
   addFile(files, `${outdir}/metric_form_generation_log.csv`, toCsv(allGenerationFormLogRows));
-  const { midiBytes, generatedRows, trackManifestRows } = generateMultitrackMidi(generatedByPart, parts, tempo, DEFAULT_GATE);
+  const { midiBytes, generatedRows, trackManifestRows } = generateMultitrackMidi(generatedByPart, parts, tempo, DEFAULT_GATE, meterSegments);
   addFile(files, `${outdir}/generated_markov_multitrack.mid`, midiBytes);
   addFile(files, `${outdir}/generated_tracks_manifest.csv`, toCsv(trackManifestRows));
   addFile(files, `${outdir}/generated_events_by_part.csv`, toCsv(generatedRows));
